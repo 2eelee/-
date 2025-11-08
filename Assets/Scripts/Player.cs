@@ -1,20 +1,25 @@
+using System.Collections;
+using UnityEditor.Tilemaps;
 using UnityEngine;
 
 public class Player : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
+    public float facingDirection = -1;
+    private bool knockedBack = false;
+    private bool canMove = true;
 
     [Header("Components")]
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private Vector2 moveInput;
-    private bool canMove = true;
-
+    public Animator animator;
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>();
         
         if (rb == null)
         {
@@ -26,24 +31,23 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        if (!canMove)
+        if (knockedBack == false)
         {
-            moveInput = Vector2.zero;
-            return;
-        }
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-
-        moveInput = new Vector2(horizontal, vertical).normalized;
-        if (spriteRenderer != null && horizontal != 0)
-        {
-            if (horizontal < 0) // 왼쪽
+            if (!canMove)
             {
-                spriteRenderer.flipX = false;
+                moveInput = Vector2.zero;
+                animator.SetBool("isRunning", false);
+                return;
             }
-            else if (horizontal > 0) // 오른쪽
+            float horizontal = Input.GetAxisRaw("Horizontal");
+            float vertical = Input.GetAxisRaw("Vertical");
+
+            moveInput = new Vector2(horizontal, vertical).normalized;
+            bool isMoving = moveInput.magnitude > 0;
+            animator.SetBool("isRunning", isMoving);
+            if ((horizontal < 0 && transform.localScale.x < 0) || (horizontal>0 && transform.localScale.x>0))
             {
-                spriteRenderer.flipX = true;
+                FlipX();
             }
         }
     }
@@ -59,11 +63,31 @@ public class Player : MonoBehaviour
         if (!canMove)
         {
             rb.linearVelocity = Vector2.zero;
+            animator.SetBool("isRunning", false);
         }
     }
-
+    void FlipX()
+    {
+        facingDirection *= -1;
+        transform.localScale = new Vector3(transform.localScale.x * -1, transform.localScale.y, transform.localScale.z);
+    }
     public bool CanMove()
     {
         return canMove;
+    }
+    public bool KnockBack(Transform enemy, float force, float stunTime)
+    {
+        knockedBack = true;
+        Vector2 direction = (transform.position - enemy.position).normalized;
+        rb.linearVelocity = direction * force;
+        animator.SetBool("knockedBack", true);
+        StartCoroutine(KnockBackCouter(stunTime));
+        return knockedBack;      
+    }
+    IEnumerator KnockBackCouter(float stunTime)
+    {
+        yield return new WaitForSeconds(stunTime);
+        rb.linearVelocity = Vector2.zero;
+        knockedBack = false;
     }
 }

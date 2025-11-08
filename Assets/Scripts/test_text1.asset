@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: test_text1
   m_EditorClassIdentifier: Assembly-CSharp::DialogueData
   npcName: NPC
-  npcIllustration: {fileID: 0}
+  npcIllustration: {fileID: -6683104019512912732, guid: 273ba54294b427848b94dc97c9055a41, type: 3}
   dialogueLines:
   - text: Hello traveler!
   - text: It is dangerous to go alone...
