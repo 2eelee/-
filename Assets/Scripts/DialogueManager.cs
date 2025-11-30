@@ -6,7 +6,7 @@ using TMPro;
 public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager Instance;
-
+    public static bool DialogueActive => dialogueActive;
     [Header("UI References")]
     [SerializeField] private GameObject dialoguePanel;
     [SerializeField] private TextMeshProUGUI nameText;
@@ -19,8 +19,8 @@ public class DialogueManager : MonoBehaviour
 
     private DialogueData currentDialogue;
     private int currentLineIndex = 0;
+    private static bool dialogueActive = false;
     private bool isTyping = false;
-    private bool dialogueActive = false;
     private Coroutine typingCoroutine;
 
     void Awake()
@@ -67,8 +67,6 @@ public class DialogueManager : MonoBehaviour
             npcIllustrationImage.sprite = dialogue.npcIllustration;
             npcIllustrationImage.enabled = true;
         }
-
-        // 첫 대사 출력
         DisplayLine();
     }
 
