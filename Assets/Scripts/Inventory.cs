@@ -5,25 +5,12 @@ using System.Linq;
 public class Inventory
 {
     private List<InventorySlot> slots;
-    private int maxSlots = 999;
-    private int slotsPerPage;
-    private int currentPage = 0;
+    private int maxSlots;
     private int nextSortIndex = 0;
 
-    public int CurrentPage => currentPage;
-    public int SlotsPerPage => slotsPerPage;
-    public int TotalPages
+    public Inventory(int maxSlots)
     {
-        get
-        {
-            var nonEmptySlots = slots.Count(s => !s.isEmpty);
-            return nonEmptySlots == 0 ? 1 : Mathf.CeilToInt((float)nonEmptySlots / slotsPerPage);
-        }
-    }
-
-    public Inventory(int slotsPerPage)
-    {
-        this.slotsPerPage = slotsPerPage;
+        this.maxSlots = maxSlots;
         slots = new List<InventorySlot>();
         for (int i = 0; i < maxSlots; i++)
         {
@@ -35,7 +22,7 @@ public class Inventory
     {
         int remainingQuantity = newItem.quantity;
 
-        // 단계 1: 기존 아이템 스택을 찜다
+        // 단계 1: 기존 아이템 스택 찜단
         foreach (var slot in slots)
         {
             if (!slot.isEmpty && slot.item.itemID == newItem.itemID)
@@ -47,33 +34,20 @@ public class Inventory
                     slot.item.quantity += addAmount;
                     remainingQuantity -= addAmount;
 
-                    if (remainingQuantity == 0) 
-                    {
-                        // ✅ FIX 2: 아이템 추가 후 UI 갱메 업데이트
+                    if (remainingQuantity == 0)
                         return;
-                    }
                 }
             }
         }
 
-        // 단계 2: 새로운 슬롯에 추가
+        // 단계 2: 비어있는 슬롯을 맨 앞에서부터 챌브담은 아이템 넘기기
         while (remainingQuantity > 0)
         {
-            // ✅ FIX 3: 비어있는 슬롯 공간을 단상에서 찬다
-            int emptyIndex = -1;
-            for (int i = 0; i < slots.Count; i++)
+            int emptyIndex = slots.FindIndex(s => s.isEmpty);
+            if (emptyIndex == -1)
             {
-                if (slots[i].isEmpty)
-                {
-                    emptyIndex = i;
-                    break;  // 찬 맨나 비어있는 슬롯 스킬
-                }
-            }
-
-            if (emptyIndex == -1) 
-            {
-                Debug.LogWarning("인벤날리 가득 가득!);
-                break;  // 더 이상 추가할 슬롯 없음
+                Debug.LogWarning("인벤날리 가득!");
+                break;
             }
 
             int addAmount = Mathf.Min(remainingQuantity, newItem.maxStackSize);
@@ -89,63 +63,49 @@ public class Inventory
         }
     }
 
-    // 슬롯 목록 가져오기 (현재 페이지)
-    public List<InventorySlot> GetCurrentPageSlots()
+    /// <summary>
+    /// 비어있는 아이템들을 순서대로 반환 (븋당슰리로 줨 아이템들을 맨앞에)
+    /// </summary>
+    public List<Item> GetAllItems()
     {
-        // ✅ FIX 4: 비어있는 아이템만 필터링
-        var nonEmptySlots = slots.Where(s => !s.isEmpty).ToList();
-        
-        // ✅ 페이지에 맨는 슬롯만 추출
-        int startIndex = currentPage * slotsPerPage;
-        int count = Mathf.Min(slotsPerPage, nonEmptySlots.Count - startIndex);
-        
-        if (startIndex >= nonEmptySlots.Count)
-            return new List<InventorySlot>();
-        
-        return nonEmptySlots.GetRange(startIndex, count);
+        // 1. 비어있는 아이템만 추출
+        var items = slots
+            .Where(s => !s.isEmpty)
+            .Select(s => s.item)
+            .ToList();
+
+        // 2. sortIndex로 정렬 (비어있는 아이템을 맨앞에 배치하기 위해)
+        items = items.OrderBy(item => item.sortIndex).ToList();
+
+        return items;
     }
 
-    public void NextPage()
-    {
-        int totalPages = TotalPages;
-        if (totalPages <= 1) return;
-
-        currentPage = (currentPage + 1) % totalPages;
-    }
-
-    // ✅ FIX 5: 비어있는 아이템만 사용당으로 제거
     public void RemoveItem(int slotIndex)
     {
-        var nonEmptySlots = slots.Where(s => !s.isEmpty).ToList();
-        int actualIndex = currentPage * slotsPerPage + slotIndex;
-
-        if (actualIndex < nonEmptySlots.Count)
+        var items = GetAllItems();
+        if (slotIndex < items.Count)
         {
-            // 비어있는 아이템만 진짹 인벤렉스 찾기
-            for (int i = 0; i < slots.Count; i++)
+            // 비어있는 아이템만 기냉으로 데이터 비기
+            int actualIndex = slots.FindIndex(s => !s.isEmpty && s.item == items[slotIndex]);
+            if (actualIndex != -1)
             {
-                if (!slots[i].isEmpty)
-                {
-                    actualIndex--;
-                    if (actualIndex == 0)
-                    {
-                        slots[i].RemoveItem();
-                        return;
-                    }
-                }
+                slots[actualIndex].RemoveItem();
             }
         }
     }
 
-    public Item GetSlotItem(int slotIndex)
+    public Item GetItem(int slotIndex)
     {
-        var nonEmptySlots = slots.Where(s => !s.isEmpty).ToList();
-        int actualIndex = currentPage * slotsPerPage + slotIndex;
-        
-        if (actualIndex < nonEmptySlots.Count)
+        var items = GetAllItems();
+        if (slotIndex < items.Count)
         {
-            return nonEmptySlots[actualIndex].item;
+            return items[slotIndex];
         }
         return null;
+    }
+
+    public int GetItemCount()
+    {
+        return slots.Count(s => !s.isEmpty);
     }
 }
