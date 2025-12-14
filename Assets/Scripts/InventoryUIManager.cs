@@ -65,6 +65,12 @@ public class InventoryUIManager : MonoBehaviour
 
     void RefreshInventoryUI(Inventory inventory, Transform slotContainer, Text pageText)
     {
+        // ✅ FIX 1: 기존 슬롯 모두 삭제 (중복 방지)
+        foreach (Transform child in slotContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
         // 현재 페이지의 슬롯 표시
         var currentSlots = inventory.GetCurrentPageSlots();
         foreach (var slot in currentSlots)
